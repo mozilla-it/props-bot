@@ -1,0 +1,8 @@
+[submodule "utils"]
+	path = props/utils
+	url = https://github.com/scottidler/utils
+	branch = master
+[submodule "botlib"]
+	path = botlib
+	url = https://github.com/mozilla-it/botlib
+	branch = master

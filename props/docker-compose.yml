@@ -1,0 +1,28 @@
+version: '3'
+services:
+  db:
+    build: ./db
+    image: itcw/props_db
+    restart: always
+    ports:
+    - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+    - database_data:/var/lib/postgresql/data
+  bot:
+    build: ./bot
+    image: itcw/props_bot
+    expose:
+    - 8080
+    ports:
+    - 8080:8080
+    links:
+    - db
+    environment:
+    - POSTGRES_DB=postgres
+    - POSTGRES_USER=postgres
+    - POSTGRES_PASSWORD=postgres
+volumes:
+  database_data:
+    driver: local

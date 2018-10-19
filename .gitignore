@@ -102,3 +102,10 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# pydoit
+.doit.db
+
+# env files
+git.env
+env-file
