@@ -40,6 +40,7 @@ DOIT_CONFIG = {
 }
 
 DOCKER_COMPOSE_YML = yaml.safe_load(open(f'{CFG.APP_PROJPATH}/docker-compose.yml'))
+SVCS = DOCKER_COMPOSE_YML['services'].keys()
 
 class UnknownPkgmgrError(Exception):
     def __init__(self):
@@ -74,7 +75,7 @@ def task_count():
         'dist',
         'venv',
         '__pycache__',
-        'auto_cert_cli.egg-info',
+        '*.egg-info',
     ]
     excludes = '--exclude-dir=' + ','.join(excludes)
     scandir = os.path.dirname(__file__)
@@ -185,7 +186,7 @@ def task_venv():
             f'venv/bin/pip3 install -r {CFG.APP_TESTPATH}/requirements.txt',
         ],
     }
-    for svc in DOCKER_COMPOSE_YML['services'].keys():
+    for svc in SVCS:
         reqfile = f'{CFG.APP_PROJPATH}/{svc}/requirements.txt'
         yield {
             'name': svc,
@@ -215,7 +216,7 @@ def task_pylint():
     '''
     run pylint before the build
     '''
-    for svc in DOCKER_COMPOSE_YML['services'].keys():
+    for svc in SVCS:
         pyfiles_list = pyfiles(f'{CFG.APP_PROJPATH}/{svc}', f'{CFG.APP_PROJPATH}/{svc}/utils')
         for pyfile in pyfiles_list:
             yield {
@@ -241,7 +242,7 @@ def task_test():
             return True
         except (sh.ErrorReturnCode_4, sh.ErrorReturnCode_5):
             return False
-    for svc in DOCKER_COMPOSE_YML['services'].keys():
+    for svc in SVCS:
         PYTHONPATH = f'PYTHONPATH=.:{CFG.APP_PROJPATH}:{CFG.APP_PROJPATH}/{svc}:$PYTHONPATH'
         if has_tests(svc):
             yield {
@@ -294,7 +295,7 @@ def task_tar():
         '--exclude=*.pyc',
         '--exclude-vcs',
     ])
-    for svc in DOCKER_COMPOSE_YML['services'].keys():
+    for svc in SVCS:
         imagename = f'itcw/{CFG.APP_PROJNAME}_{svc}'
         yield {
             'name': svc,
@@ -315,7 +316,7 @@ def task_build():
     actions = [
         f'cd {CFG.APP_PROJPATH} && docker-compose build',
     ]
-    for svc in DOCKER_COMPOSE_YML['services'].keys():
+    for svc in SVCS:
         tarball = f'{CFG.APP_PROJPATH}/{svc}/app.tar.gz'
         imagename = f'itcw/{CFG.APP_PROJNAME}_{svc}'
         actions += [
@@ -335,7 +336,7 @@ def task_publish():
     '''
     publish docker image(s) to docker hub
     '''
-    for svc in DOCKER_COMPOSE_YML['services'].keys():
+    for svc in SVCS:
         imagename = f'itcw/{CFG.APP_PROJNAME}_{svc}'
         yield {
             'name': svc,
