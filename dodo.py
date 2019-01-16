@@ -287,17 +287,24 @@ def task_tar():
     '''
     tar up source files, dereferncing symlinks
     '''
+    tarball = 'app.tar.gz'
+    excludes = ' '.join([
+        f'--exclude={tarball}',
+        '--exclude=__pycache__',
+        '--exclude=*.pyc',
+        '--exclude-vcs',
+    ])
     for svc in DOCKER_COMPOSE_YML['services'].keys():
         imagename = f'itcw/{CFG.APP_PROJNAME}_{svc}'
         yield {
             'name': svc,
             'task_dep': [
                 'noroot',
-                'checkreqs',
+                'gitenv',
                 'test',
             ],
             'actions': [
-                f'cd {CFG.APP_PROJNAME}/{svc} && touch app.tar.gz && tar cvfhz app.tar.gz --exclude=app.tar.gz --exclude-vcs .',
+                f'cd {CFG.APP_PROJNAME}/{svc} && touch {tarball} && tar cvfhz {tarball} {excludes} .',
             ],
         }
 
@@ -376,7 +383,6 @@ def task_deploy():
             'checkreqs',
             'test',
             'build',
-            'gitenv',
             'dockercompose',
         ],
         'actions': [
