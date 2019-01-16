@@ -12,8 +12,8 @@ from doit import get_var
 from ruamel import yaml
 from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(__file__)+'/props/bot')
-from config import CFG
+from props.bot.config import CFG
+
 from utils.shell import cd, call
 from utils.dbg import dbg #FIXME: remember to remove this
 
