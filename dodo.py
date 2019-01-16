@@ -15,8 +15,6 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(__file__)+'/props/bot')
 from config import CFG
 from utils.shell import cd, call
-from utils.timestamp import utcnow, datetime2int
-
 from utils.dbg import dbg #FIXME: remember to remove this
 
 ## https://docs.docker.com/compose/compose-file/compose-versioning/
@@ -285,24 +283,42 @@ def task_tls():
         'uptodate': [uptodate],
     }
 
+def task_tar():
+    '''
+    tar up source files, dereferncing symlinks
+    '''
+    for svc in DOCKER_COMPOSE_YML['services'].keys():
+        imagename = f'itcw/{CFG.APP_PROJNAME}_{svc}'
+        yield {
+            'name': svc,
+            'task_dep': [
+                'noroot',
+                'checkreqs',
+                'test',
+            ],
+            'actions': [
+                f'cd {CFG.APP_PROJNAME}/{svc} && touch app.tar.gz && tar cvfhz app.tar.gz --exclude=app.tar.gz --exclude-vcs .',
+            ],
+        }
+
 def task_build():
     '''
     build flask|quart app via docker-compose
     '''
-
     actions = [
         f'cd {CFG.APP_PROJPATH} && docker-compose build',
     ]
     for svc in DOCKER_COMPOSE_YML['services'].keys():
+        tarball = f'{CFG.APP_PROJPATH}/{svc}/app.tar.gz'
         imagename = f'itcw/{CFG.APP_PROJNAME}_{svc}'
         actions += [
+            f'[ -f {tarball} ] && rm {tarball}',
             f'docker tag {imagename} {imagename}:{CFG.APP_TAGNAME}',
         ]
     return {
         'task_dep': [
             'noroot',
-            'checkreqs',
-            'test',
+            'tar',
             'dockercompose',
         ],
         'actions': actions,
