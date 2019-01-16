@@ -14,8 +14,12 @@ from pathlib import Path
 
 from props.bot.config import CFG
 
-from utils.shell import cd, call
-from utils.dbg import dbg #FIXME: remember to remove this
+try:
+    from utils.shell import cd, call
+    from utils.dbg import dbg #FIXME: remember to remove this
+except ModuleNotFoundError as ex:
+    print('is the utils submodule init\d?', file=sys.stderr)
+    sys.exit(-1)
 
 ## https://docs.docker.com/compose/compose-file/compose-versioning/
 MINIMUM_DOCKER_COMPOSE_VERSION = '1.13' # allows compose format 3.0
