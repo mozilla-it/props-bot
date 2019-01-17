@@ -300,7 +300,9 @@ def task_tar():
         '--exclude-vcs',
     ])
     for svc in SVCS:
-        imagename = f'itcw/{CFG.APP_PROJNAME}_{svc}'
+        ## it is important to not that this is required to keep the tarballs from
+        ## genereating different checksums and therefore different layers in docker
+        cmd = f'cd {CFG.APP_PROJPATH}/{svc} && tar cvh {excludes} . | gzip -n > {tarball}'
         yield {
             'name': svc,
             'task_dep': [
@@ -309,7 +311,8 @@ def task_tar():
                 'test',
             ],
             'actions': [
-                f'cd {CFG.APP_PROJNAME}/{svc} && touch {tarball} && tar cvfhz {tarball} {excludes} .',
+                f'echo "{cmd}"',
+                f'{cmd}',
             ],
         }
 
@@ -317,24 +320,34 @@ def task_build():
     '''
     build flask|quart app via docker-compose
     '''
-    actions = [
-        f'cd {CFG.APP_PROJPATH} && docker-compose build',
-    ]
-    for svc in SVCS:
-        tarball = f'{CFG.APP_PROJPATH}/{svc}/app.tar.gz'
-        imagename = f'itcw/{CFG.APP_PROJNAME}_{svc}'
-        actions += [
-            f'[ -f {tarball} ] && rm {tarball}',
-            f'docker tag {imagename} {imagename}:{CFG.APP_TAGNAME}',
-        ]
     return {
         'task_dep': [
             'noroot',
             'tar',
             'dockercompose',
         ],
-        'actions': actions,
+        'actions': [
+            f'cd {CFG.APP_PROJPATH} && docker-compose build',
+        ],
     }
+
+def task_tag():
+    '''
+    tag the docker images with the tagname
+    '''
+    for svc in SVCS:
+        imagename = f'itcw/{CFG.APP_PROJNAME}_{svc}'
+        yield {
+            'name': svc,
+            'task_dep': [
+                'noroot',
+                'build',
+            ],
+            'actions': [
+                f'echo created tagged image: {imagename}:{CFG.APP_TAGNAME}',
+                f'docker tag {imagename} {imagename}:{CFG.APP_TAGNAME}',
+            ],
+        }
 
 def task_publish():
     '''
@@ -347,6 +360,7 @@ def task_publish():
             'task_dep': [
                 'noroot',
                 'build',
+                'tag',
             ],
             'actions': [
                 f'docker push {imagename}:{CFG.APP_TAGNAME}',
@@ -358,24 +372,30 @@ def task_gitenv():
     create git.env for config to use for git env vars
     '''
     gitenv = f'{CFG.APP_BOTPATH}/git.env'
-    envs = [
+    envs = '\n'.join([
         f'APP_REPOROOT={CFG.APP_REPOROOT}',
         f'APP_VERSION={CFG.APP_VERSION}',
         f'APP_BRANCH={CFG.APP_BRANCH}',
         f'APP_REVISION={CFG.APP_REVISION}',
         f'APP_REMOTE_ORIGIN_URL={CFG.APP_REMOTE_ORIGIN_URL}',
-    ]
-    def write_gitenv():
+    ])
+    def gitenv_write():
         with open(gitenv, 'w') as f:
-            for env in envs:
-                f.write(env + '\n')
+            f.write(envs)
+    def gitenv_uptodate():
+        try:
+            with open(gitenv, 'r') as f:
+                return f.read() == envs
+        except Exception as ex:
+            print(ex)
+        return False
     return {
         'task_dep': [
             'noroot',
         ],
-        'actions': [write_gitenv],
+        'actions': [gitenv_write],
         'targets': [gitenv],
-        'uptodate': [False],
+        'uptodate': [gitenv_uptodate],
     }
 
 def task_deploy():
