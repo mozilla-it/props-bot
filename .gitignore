@@ -109,3 +109,6 @@ venv.bak/
 # env files
 git.env
 env-file
+
+# ignore the sourc tarball
+app.tar.gz
