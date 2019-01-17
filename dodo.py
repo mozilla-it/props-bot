@@ -320,6 +320,10 @@ def task_build():
     '''
     build flask|quart app via docker-compose
     '''
+    env = ' '.join([
+        'env',
+        f'APP_VERSION={CFG.APP_VERSION}',
+    ])
     return {
         'task_dep': [
             'noroot',
@@ -327,7 +331,7 @@ def task_build():
             'dockercompose',
         ],
         'actions': [
-            f'cd {CFG.APP_PROJPATH} && docker-compose build',
+            f'cd {CFG.APP_PROJPATH} && {env} docker-compose build',
         ],
     }
 
@@ -345,7 +349,7 @@ def task_tag():
             ],
             'actions': [
                 f'echo created tagged image: {imagename}:{CFG.APP_TAGNAME}',
-                f'docker tag {imagename} {imagename}:{CFG.APP_TAGNAME}',
+                f'docker tag {imagename}:{CFG.APP_VERSION} {imagename}:{CFG.APP_TAGNAME}',
             ],
         }
 
@@ -372,7 +376,7 @@ def task_gitenv():
     create git.env for config to use for git env vars
     '''
     gitenv = f'{CFG.APP_BOTPATH}/git.env'
-    envs = '\n'.join([
+    text = '\n'.join([
         f'APP_REPOROOT={CFG.APP_REPOROOT}',
         f'APP_VERSION={CFG.APP_VERSION}',
         f'APP_BRANCH={CFG.APP_BRANCH}',
@@ -381,11 +385,11 @@ def task_gitenv():
     ])
     def gitenv_write():
         with open(gitenv, 'w') as f:
-            f.write(envs)
+            f.write(text)
     def gitenv_uptodate():
         try:
             with open(gitenv, 'r') as f:
-                return f.read() == envs
+                return f.read() == text
         except Exception as ex:
             print(ex)
         return False
@@ -402,6 +406,10 @@ def task_deploy():
     '''
     deloy flask|quart app via docker-compose
     '''
+    env = ' '.join([
+        'env',
+        f'APP_VERSION={CFG.APP_VERSION}',
+    ])
     return {
         'task_dep': [
             'noroot',
@@ -411,7 +419,7 @@ def task_deploy():
             'dockercompose',
         ],
         'actions': [
-            f'cd {CFG.APP_PROJPATH} && docker-compose up --remove-orphans -d',
+            f'cd {CFG.APP_PROJPATH} && {env} docker-compose up --remove-orphans -d',
         ],
     }
 
