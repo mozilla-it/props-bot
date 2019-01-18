@@ -426,7 +426,6 @@ def task_rmtagged():
     '''
     awk = """awk '{print $1 ":" $2}'"""
     query = f'$(docker images | grep itcw/{CFG.APP_PROJNAME}_ | {awk})'
-    print(query)
     return {
         'actions': [
             f'docker rmi {query}',
