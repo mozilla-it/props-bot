@@ -12,7 +12,7 @@ import time
 import logging
 import sh
 
-from decouple import Config, UndefinedValueError, RepositoryEnv, config, AutoConfig
+from decouple import UndefinedValueError, AutoConfig, config
 
 LOG_LEVELS = [
     'DEBUG',
@@ -79,7 +79,10 @@ def git(*args, strip=True, **kwargs):
             raise NotGitRepoError
         log.error(e)
 
-class AutoConfigPlus(AutoConfig):
+class AutoConfigPlus(AutoConfig): #pylint: disable=too-many-public-methods
+    '''
+    thin wrapper around AutoConfig adding some extra features
+    '''
 
     @property
     def APP_UID(self):
