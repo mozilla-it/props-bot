@@ -12,7 +12,7 @@ import time
 import logging
 import sh
 
-from decouple import Config, UndefinedValueError, RepositoryEnv, config
+from decouple import Config, UndefinedValueError, RepositoryEnv, config, AutoConfig
 
 LOG_LEVELS = [
     'DEBUG',
@@ -79,34 +79,7 @@ def git(*args, strip=True, **kwargs):
             raise NotGitRepoError
         log.error(e)
 
-class AutoConfigPlus: #pylint: disable=too-many-public-methods
-    '''
-    AutoConfigPlus
-    '''
-    def __init__(self, *args, path=os.getcwd(), **kwargs):
-        '''
-        init
-        '''
-        envs = [f for f in os.listdir(path) if f.endswith('.env')]
-        envs = sorted(envs, key=lambda env: (len(env), env))
-        self._configs = {
-            env: Config(RepositoryEnv(env)) for env in envs
-        }
-        super(AutoConfigPlus, self).__init__(*args, **kwargs)
-
-    def config(self, *args, **kwargs):
-        '''
-        config
-        '''
-        ex = None
-        for _, _config in self._configs.items():
-            try:
-                return _config(*args, **kwargs)
-            except UndefinedValueError as uve:
-                ex = uve
-                continue
-        if ex:
-            raise ex
+class AutoConfigPlus(AutoConfig):
 
     @property
     def APP_UID(self):
@@ -134,7 +107,7 @@ class AutoConfigPlus: #pylint: disable=too-many-public-methods
         '''
         port
         '''
-        return self.config('APP_PORT', 5000, cast=int)
+        return self('APP_PORT', 5000, cast=int)
 
     @property
     def APP_JOBS(self):
@@ -151,21 +124,21 @@ class AutoConfigPlus: #pylint: disable=too-many-public-methods
         '''
         timeout
         '''
-        return self.config('APP_TIMEOUT', 120, cast=int)
+        return self('APP_TIMEOUT', 120, cast=int)
 
     @property
     def APP_WORKERS(self):
         '''
         workers
         '''
-        return self.config('APP_WORKERS', 2, cast=int)
+        return self('APP_WORKERS', 2, cast=int)
 
     @property
     def APP_MODULE(self):
         '''
         module
         '''
-        return self.config('APP_MODULE', 'main:app')
+        return self('APP_MODULE', 'main:app')
 
     @property
     def APP_REPOROOT(self):
@@ -175,7 +148,7 @@ class AutoConfigPlus: #pylint: disable=too-many-public-methods
         try:
             return git('rev-parse', '--show-toplevel')
         except NotGitRepoError:
-            return self.config('APP_REPOROOT')
+            return self('APP_REPOROOT')
 
     @property
     def APP_TAGNAME(self):
@@ -198,7 +171,7 @@ class AutoConfigPlus: #pylint: disable=too-many-public-methods
         try:
             return git('describe', '--abbrev=7', '--always')
         except NotGitRepoError:
-            return self.config('APP_VERSION')
+            return self('APP_VERSION')
 
     @property
     def APP_BRANCH(self):
@@ -208,7 +181,7 @@ class AutoConfigPlus: #pylint: disable=too-many-public-methods
         try:
             return git('rev-parse', '--abbrev-ref', 'HEAD')
         except NotGitRepoError:
-            return self.config('APP_BRANCH')
+            return self('APP_BRANCH')
 
     @property
     def APP_DEPENV(self):
@@ -223,6 +196,16 @@ class AutoConfigPlus: #pylint: disable=too-many-public-methods
         return env
 
     @property
+    def APP_SRCTAR(self):
+        '''
+        srctar
+        '''
+        try:
+            return self('APP_SRCTAR')
+        except UndefinedValueError:
+            return '.src.tar.gz'
+
+    @property
     def APP_REVISION(self):
         '''
         revision
@@ -230,7 +213,7 @@ class AutoConfigPlus: #pylint: disable=too-many-public-methods
         try:
             return git('rev-parse', 'HEAD')
         except NotGitRepoError:
-            return self.config('APP_REVISION')
+            return self('APP_REVISION')
 
     @property
     def APP_REMOTE_ORIGIN_URL(self):
@@ -240,7 +223,7 @@ class AutoConfigPlus: #pylint: disable=too-many-public-methods
         try:
             return git('config', '--get', 'remote.origin.url')
         except NotGitRepoError:
-            return self.config('APP_REMOTE_ORIGIN_URL')
+            return self('APP_REMOTE_ORIGIN_URL')
 
     @property
     def APP_REPONAME(self):
@@ -298,7 +281,7 @@ class AutoConfigPlus: #pylint: disable=too-many-public-methods
         try:
             result = git('ls-remote', f'https://github.com/{self.APP_REPONAME}')
         except NotGitRepoError:
-            result = self.config('APP_LS_REMOTE')
+            result = self('APP_LS_REMOTE')
         return {
             refname: revision for revision, refname in [line.split() for line in result.split('\n')]
         }
@@ -311,7 +294,7 @@ class AutoConfigPlus: #pylint: disable=too-many-public-methods
         try:
             result = git('submodule', 'status', strip=False)
         except NotGitRepoError:
-            result = self.config('APP_GSM_STATUS')
+            result = self('APP_GSM_STATUS')
         pattern = r'([ +-])([a-f0-9]{40}) ([A-Za-z0-9\/\-_.]+)( .*)?'
         matches = re.findall(pattern, result)
         states = {
@@ -330,7 +313,7 @@ class AutoConfigPlus: #pylint: disable=too-many-public-methods
         log.info(f'attr = {attr}')
         if attr == 'create_doit_tasks': #note: to keep pydoit's hands off
             return lambda: None
-        result = self.config(attr)
+        result = self(attr)
         try:
             return int(result)
         except ValueError:

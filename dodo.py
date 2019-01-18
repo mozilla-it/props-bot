@@ -292,9 +292,8 @@ def task_tar():
     '''
     tar up source files, dereferncing symlinks
     '''
-    tarball = 'app.tar.gz'
     excludes = ' '.join([
-        f'--exclude={tarball}',
+        f'--exclude={CFG.APP_SRCTAR}',
         '--exclude=__pycache__',
         '--exclude=*.pyc',
         '--exclude-vcs',
@@ -302,12 +301,11 @@ def task_tar():
     for svc in SVCS:
         ## it is important to not that this is required to keep the tarballs from
         ## genereating different checksums and therefore different layers in docker
-        cmd = f'cd {CFG.APP_PROJPATH}/{svc} && tar cvh {excludes} . | gzip -n > {tarball}'
+        cmd = f'cd {CFG.APP_PROJPATH}/{svc} && echo "$(git status -s)" > {CFG.APP_REVISION} && tar cvh {excludes} . | gzip -n > {CFG.APP_SRCTAR} && rm {CFG.APP_REVISION}'
         yield {
             'name': svc,
             'task_dep': [
                 'noroot',
-                'gitenv',
                 'test',
             ],
             'actions': [
@@ -323,6 +321,15 @@ def task_build():
     env = ' '.join([
         'env',
         f'APP_VERSION={CFG.APP_VERSION}',
+        f'APP_BRANCH={CFG.APP_BRANCH}',
+        f'APP_REVISION={CFG.APP_REVISION}',
+        f'APP_REMOTE_ORIGIN_URL={CFG.APP_REMOTE_ORIGIN_URL}',
+    ])
+    labels = '--label ' + '--label '.join([
+        f'APP_VERSION={CFG.APP_VERSION}',
+        f'APP_BRANCH={CFG.APP_BRANCH}',
+        f'APP_REVISION={CFG.APP_REVISION}',
+        f'APP_REMOTE_ORIGIN_URL={CFG.APP_REMOTE_ORIGIN_URL}',
     ])
     return {
         'task_dep': [
@@ -371,37 +378,6 @@ def task_publish():
             ],
         }
 
-def task_gitenv():
-    '''
-    create git.env for config to use for git env vars
-    '''
-    gitenv = f'{CFG.APP_BOTPATH}/git.env'
-    text = '\n'.join([
-        f'APP_REPOROOT={CFG.APP_REPOROOT}',
-        f'APP_VERSION={CFG.APP_VERSION}',
-        f'APP_BRANCH={CFG.APP_BRANCH}',
-        f'APP_REVISION={CFG.APP_REVISION}',
-        f'APP_REMOTE_ORIGIN_URL={CFG.APP_REMOTE_ORIGIN_URL}',
-    ])
-    def gitenv_write():
-        with open(gitenv, 'w') as f:
-            f.write(text)
-    def gitenv_uptodate():
-        try:
-            with open(gitenv, 'r') as f:
-                return f.read() == text
-        except Exception as ex:
-            print(ex)
-        return False
-    return {
-        'task_dep': [
-            'noroot',
-        ],
-        'actions': [gitenv_write],
-        'targets': [gitenv],
-        'uptodate': [gitenv_uptodate],
-    }
-
 def task_deploy():
     '''
     deloy flask|quart app via docker-compose
@@ -409,6 +385,9 @@ def task_deploy():
     env = ' '.join([
         'env',
         f'APP_VERSION={CFG.APP_VERSION}',
+        f'APP_BRANCH={CFG.APP_BRANCH}',
+        f'APP_REVISION={CFG.APP_REVISION}',
+        f'APP_REMOTE_ORIGIN_URL={CFG.APP_REMOTE_ORIGIN_URL}',
     ])
     return {
         'task_dep': [
