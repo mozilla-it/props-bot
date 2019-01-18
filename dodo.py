@@ -402,12 +402,63 @@ def task_deploy():
         ],
     }
 
+def task_stop():
+    '''
+    stop running containers
+    '''
+    def check_docker_ps():
+        cmd = 'docker ps --format "{{.Names}}" | grep ' + CFG.APP_PROJNAME + ' | { grep -v grep || true; }'
+        out = call(cmd, throw=True)[1]
+        return out.split('\n') if out else []
+    containers = ' '.join(check_docker_ps())
+    return {
+        'actions': [
+            f'docker rm -f {containers}',
+        ],
+        'uptodate': [
+            lambda: len(check_docker_ps()) == 0,
+        ],
+    }
+
+def task_rmtagged():
+    '''
+    remove all tagged images matching: itcw/{CFG.PROJNAME}_
+    '''
+    awk = """awk '{print $1 ":" $2}'"""
+    query = f'$(docker images | grep itcw/{CFG.APP_PROJNAME}_ | {awk})'
+    print(query)
+    return {
+        'actions': [
+            f'docker rmi {query}',
+        ],
+        'uptodate': [
+            f'[ -z "{query}" ] && exit 0 || exit 1',
+        ],
+    }
+
+def task_rmcontainers():
+    '''
+    remove stopped containers
+    '''
+    query = '$(docker ps -q -f "status=exited")'
+    return {
+        'actions': [
+            f'docker rm {query}',
+        ],
+        'uptodate': [
+            f'[ -z "{query}" ] && exit 0 || exit 1',
+        ],
+    }
+
 def task_rmimages():
     '''
     remove dangling docker images
     '''
-    query = '`docker images -q -f dangling=true`'
+    query = '$(docker images -q -f dangling=true)'
     return {
+        'task_dep': [
+            'rmcontainers',
+        ],
         'actions': [
             f'docker rmi {query}',
         ],
@@ -420,7 +471,7 @@ def task_rmvolumes():
     '''
     remove dangling docker volumes
     '''
-    query = '`docker volume ls -q -f dangling=true`'
+    query = '$(docker volume ls -q -f dangling=true)'
     return {
         'actions': [
             f'docker volume rm {query}',
@@ -489,24 +540,6 @@ def task_prune():
     return {
         'actions': ['docker rm `docker ps -q -f "status=exited"`'],
         'uptodate': ['[ -n "`docker ps -q -f status=exited`" ] && exit 1 || exit 0']
-    }
-
-def task_stop():
-    '''
-    stop running containers
-    '''
-    def check_docker_ps():
-        cmd = 'docker ps --format "{{.Names}}" | grep ' + CFG.APP_PROJNAME + ' | { grep -v grep || true; }'
-        out = call(cmd, throw=True)[1]
-        return out.split('\n') if out else []
-    containers = ' '.join(check_docker_ps())
-    return {
-        'actions': [
-            f'docker rm -f {containers}',
-        ],
-        'uptodate': [
-            lambda: len(check_docker_ps()) == 0,
-        ],
     }
 
 if __name__ == '__main__':
