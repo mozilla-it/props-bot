@@ -71,6 +71,16 @@ def pyfiles(path, exclude=None):
     pyfiles = set(Path(path).rglob('*.py')) - set(Path(exclude).rglob('*.py') if exclude else [])
     return [pyfile.as_posix() for pyfile in pyfiles]
 
+def env():
+    return ' '.join([
+        'env',
+        f'APP_PROJNAME={CFG.APP_PROJNAME}',
+        f'APP_VERSION={CFG.APP_VERSION}',
+        f'APP_BRANCH={CFG.APP_BRANCH}',
+        f'APP_REVISION={CFG.APP_REVISION}',
+        f'APP_REMOTE_ORIGIN_URL={CFG.APP_REMOTE_ORIGIN_URL}',
+    ])
+
 def task_count():
     '''
     use the cloc utility to count lines of code
@@ -318,19 +328,6 @@ def task_build():
     '''
     build flask|quart app via docker-compose
     '''
-    env = ' '.join([
-        'env',
-        f'APP_VERSION={CFG.APP_VERSION}',
-        f'APP_BRANCH={CFG.APP_BRANCH}',
-        f'APP_REVISION={CFG.APP_REVISION}',
-        f'APP_REMOTE_ORIGIN_URL={CFG.APP_REMOTE_ORIGIN_URL}',
-    ])
-    labels = '--label ' + '--label '.join([
-        f'APP_VERSION={CFG.APP_VERSION}',
-        f'APP_BRANCH={CFG.APP_BRANCH}',
-        f'APP_REVISION={CFG.APP_REVISION}',
-        f'APP_REMOTE_ORIGIN_URL={CFG.APP_REMOTE_ORIGIN_URL}',
-    ])
     return {
         'task_dep': [
             'noroot',
@@ -338,7 +335,8 @@ def task_build():
             'dockercompose',
         ],
         'actions': [
-            f'cd {CFG.APP_PROJPATH} && {env} docker-compose build',
+            f'echo "cd {CFG.APP_PROJPATH} && {env()} docker-compose build"',
+            f'cd {CFG.APP_PROJPATH} && {env()} docker-compose build',
         ],
     }
 
@@ -382,13 +380,6 @@ def task_deploy():
     '''
     deloy flask|quart app via docker-compose
     '''
-    env = ' '.join([
-        'env',
-        f'APP_VERSION={CFG.APP_VERSION}',
-        f'APP_BRANCH={CFG.APP_BRANCH}',
-        f'APP_REVISION={CFG.APP_REVISION}',
-        f'APP_REMOTE_ORIGIN_URL={CFG.APP_REMOTE_ORIGIN_URL}',
-    ])
     return {
         'task_dep': [
             'noroot',
@@ -398,7 +389,8 @@ def task_deploy():
             'dockercompose',
         ],
         'actions': [
-            f'cd {CFG.APP_PROJPATH} && {env} docker-compose up --remove-orphans -d',
+            f'echo "cd {CFG.APP_PROJPATH} && {env()} docker-compose up --remove-orphans -d"',
+            f'cd {CFG.APP_PROJPATH} && {env()} docker-compose up --remove-orphans -d',
         ],
     }
 
