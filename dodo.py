@@ -75,6 +75,7 @@ def env():
     return ' '.join([
         'env',
         f'APP_PROJNAME={CFG.APP_PROJNAME}',
+        f'APP_PROJPATH={CFG.APP_PROJPATH}',
         f'APP_VERSION={CFG.APP_VERSION}',
         f'APP_BRANCH={CFG.APP_BRANCH}',
         f'APP_REVISION={CFG.APP_REVISION}',
