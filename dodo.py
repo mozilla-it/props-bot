@@ -11,15 +11,9 @@ import glob
 from doit import get_var
 from ruamel import yaml
 from pathlib import Path
+from subprocess import check_call, check_output, CalledProcessError, PIPE
 
 from props.bot.config import CFG
-
-try:
-    from utils.shell import cd, call
-    from utils.dbg import dbg #FIXME: remember to remove this
-except ModuleNotFoundError as ex:
-    print('is the utils submodule init\d?', file=sys.stderr)
-    sys.exit(-1)
 
 ## https://docs.docker.com/compose/compose-file/compose-versioning/
 MINIMUM_DOCKER_COMPOSE_VERSION = '1.13' # allows compose format 3.0
@@ -51,7 +45,6 @@ class UnknownPkgmgrError(Exception):
         super(UnknownPkgmgrError, self).__init__('unknown pkgmgr!')
 
 def check_hash(program):
-    from subprocess import check_call, CalledProcessError, PIPE
     try:
         check_call(f'hash {program}', shell=True, stdout=PIPE, stderr=PIPE)
         return True
@@ -129,14 +122,12 @@ def task_dockercompose():
     '''
     assert docker-compose version ({0}) or higher
     '''
-    from props.bot.utils.function import docstr
-    docstr(MINIMUM_DOCKER_COMPOSE_VERSION)
     def check_docker_compose():
         import re
         from subprocess import check_output
         from packaging.version import parse as version_parse
         pattern = '(docker-compose version) ([0-9.]+(-rc[0-9])?)(, build [a-z0-9]+)'
-        output = call('docker-compose --version')[1].strip()
+        output = check_output('docker-compose --version', shell=True).decode('utf-8').strip()
         regex = re.compile(pattern)
         match = regex.search(output)
         version = match.groups()[1]
@@ -164,7 +155,7 @@ def task_pull():
     '''
     do a safe git pull
     '''
-    submods = call("git submodule status | awk '{print $2}'")[1].split()
+    submods = check_output("git submodule status | awk '{print $2}'", shell=True).decode('utf-8').split()
     test = '`git diff-index --quiet HEAD --`'
     pull = 'git pull --rebase'
     update = 'git submodule update --remote'
@@ -401,7 +392,7 @@ def task_stop():
     '''
     def check_docker_ps():
         cmd = 'docker ps --format "{{.Names}}" | grep ' + CFG.APP_PROJNAME + ' | { grep -v grep || true; }'
-        out = call(cmd, throw=True)[1]
+        out = check_output(cmd, shell=True).decode('utf-8').strip()
         return out.split('\n') if out else []
     containers = ' '.join(check_docker_ps())
     return {
