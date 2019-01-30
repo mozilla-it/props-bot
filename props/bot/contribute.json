@@ -15,6 +15,6 @@
         "report": "https://github.com/mozilla-it/props-bot/issues",
     },
     "urls": {
-        "prod": "https://props-bot.mozilla-slack.app"
+        "prod": "https://props.mozilla-slack.app"
     }
 }
