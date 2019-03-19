@@ -80,7 +80,7 @@ def git(*args, strip=True, **kwargs):
             raise NotGitRepoError
         log.error(e)
 
-class AutoConfigPlus(object): #pylint: disable=too-many-public-methods
+class AutoConfigs(object): #pylint: disable=too-many-public-methods
     '''
     composes multiple config objects similar to how AutoConfig works
     '''
@@ -107,6 +107,7 @@ class AutoConfigPlus(object): #pylint: disable=too-many-public-methods
         return matches
 
     def _load_configs(self, path):
+        try:
             filenames = self._find_files(os.path.abspath(path))
         except Exception:
             filenames = ['']
@@ -120,6 +121,42 @@ class AutoConfigPlus(object): #pylint: disable=too-many-public-methods
             self.configs += [Config(repo)]
         return self.configs
 
+    def _lookup(self, *args, **kwargs):
+        '''
+        lookup
+        '''
+        log.info(f'args={args} kwargs={kwargs}')
+        if not self.configs:
+            self._load_configs(self.search_path or self.caller_path)
+        if len(args) == 0:
+            raise TypeError("get() missing 1 required positional argument: 'option'")
+        result = UndefinedValueError(f'{args[0]} not found. Declare it as envvar or define a default value.')
+        for config in self.configs:
+            try:
+                result = config(*args, **kwargs)
+                break
+            except UndefinedValueError:
+                continue
+        if isinstance(result, UndefinedValueError):
+            raise result
+        try:
+            return int(result)
+        except ValueError:
+            return result
+
+    def __call__(self, *args, **kwargs):
+        '''
+        call
+        '''
+        return self._lookup(*args, **kwargs)
+
+    def __getattr__(self, attr):
+        '''
+        getattr
+        '''
+        if attr == 'create_doit_tasks': #note: to keep pydoit's hands off
+            return lambda: None
+        return self._lookup(attr)
 
     @property
     def APP_UID(self):
@@ -346,43 +383,5 @@ class AutoConfigPlus(object): #pylint: disable=too-many-public-methods
             repopath: [revision, states[state]] for state, revision, repopath, _ in matches
         }
 
-    def __getattr__(self, attr):
-        '''
-        getattr
-        '''
-        log.info(f'attr = {attr}')
-        if attr == 'create_doit_tasks': #note: to keep pydoit's hands off
-            return lambda: None
-        result = self(attr)
-        try:
-            return int(result)
-        except ValueError:
-            return result
 
-     def __getattr__(self, attr):
-        '''
-        getattr
-        '''
-        log.info(f'attr = {attr}')
-        if attr == 'create_doit_tasks': #note: to keep pydoit's hands off
-            return lambda: None
-        result = self(attr)
-        if not self.configs:
-            self._load_configs(self.search_path or self.caller_path)
-        log.info(f'attr = {attr}')
-        result = UndefinedValueError(f'{attr} not found. Declare it as envvar or define a default value.')
-        for config in self.configs:
-            try:
-                result = config(attr)
-                break
-            except UndefinedValueError:
-                continue
-        if isinstance(result, UndefinedValueError):
-            raise result
-        try:
-            return int(result)
-        except ValueError:
-            return result
-
-
-CFG = AutoConfigPlus()
+CFG = AutoConfigs()

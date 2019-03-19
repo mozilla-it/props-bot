@@ -13,7 +13,7 @@ from ruamel import yaml
 from pathlib import Path
 from subprocess import check_call, check_output, CalledProcessError, PIPE
 
-from props.bot.config import CFG
+from props.bot.cfg import CFG
 
 ## https://docs.docker.com/compose/compose-file/compose-versioning/
 MINIMUM_DOCKER_COMPOSE_VERSION = '1.13' # allows compose format 3.0
