@@ -15,7 +15,7 @@ from slackclient import SlackClient
 
 from utils.dbg import dbg
 from utils.dictionary import merge
-from config import CFG
+from cfg import CFG
 
 from propsbot import PropsBot
 

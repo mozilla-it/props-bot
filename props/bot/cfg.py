@@ -12,7 +12,8 @@ import time
 import logging
 import sh
 
-from decouple import UndefinedValueError, AutoConfig, config
+from fnmatch import fnmatch
+from decouple import UndefinedValueError, AutoConfig, config, Config, RepositoryIni, RepositoryEnv, RepositoryEmpty
 
 LOG_LEVELS = [
     'DEBUG',
@@ -79,10 +80,46 @@ def git(*args, strip=True, **kwargs):
             raise NotGitRepoError
         log.error(e)
 
-class AutoConfigPlus(AutoConfig): #pylint: disable=too-many-public-methods
+class AutoConfigPlus(object): #pylint: disable=too-many-public-methods
     '''
-    thin wrapper around AutoConfig adding some extra features
+    composes multiple config objects similar to how AutoConfig works
     '''
+
+    @property
+    def caller_path(self):
+        frame = sys._getframe()
+        path = os.path.dirname(frame.f_back.f_back.f_code.co_filename)
+        if path == '/usr/local/lib/python3.6/dist-packages/IPython/core':
+            path = '/home/sidler/repos/mozilla-it/props-bot/props/bot'
+        return path
+
+    def __init__(self, search_path=None, *patterns):
+        self.search_path = search_path
+        self.patterns = patterns or ('*.env', '*.ini')
+        self.configs = []
+
+    def _find_files(self, path):
+        matches = []
+        filenames = [filename for filename in os.listdir(path) if os.path.isfile(filename)]
+        for pattern in self.patterns:
+            matches += [filename for filename in filenames if fnmatch(filename, pattern)]
+        prefix_path = os.path.commonprefix([self.caller_path, path])
+        return matches
+
+    def _load_configs(self, path):
+            filenames = self._find_files(os.path.abspath(path))
+        except Exception:
+            filenames = ['']
+        for filename in filenames:
+            if filename.endswith('.ini'):
+                repo = RepositoryIni(os.path.basename(filename))
+            elif filename.endswith('.env'):
+                repo = RepositoryEnv(os.path.basename(filename))
+            else:
+                repo = RepositoryEmpty(filename)
+            self.configs += [Config(repo)]
+        return self.configs
+
 
     @property
     def APP_UID(self):
@@ -321,5 +358,31 @@ class AutoConfigPlus(AutoConfig): #pylint: disable=too-many-public-methods
             return int(result)
         except ValueError:
             return result
+
+     def __getattr__(self, attr):
+        '''
+        getattr
+        '''
+        log.info(f'attr = {attr}')
+        if attr == 'create_doit_tasks': #note: to keep pydoit's hands off
+            return lambda: None
+        result = self(attr)
+        if not self.configs:
+            self._load_configs(self.search_path or self.caller_path)
+        log.info(f'attr = {attr}')
+        result = UndefinedValueError(f'{attr} not found. Declare it as envvar or define a default value.')
+        for config in self.configs:
+            try:
+                result = config(attr)
+                break
+            except UndefinedValueError:
+                continue
+        if isinstance(result, UndefinedValueError):
+            raise result
+        try:
+            return int(result)
+        except ValueError:
+            return result
+
 
 CFG = AutoConfigPlus()
