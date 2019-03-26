@@ -37,19 +37,23 @@ DOIT_CONFIG = {
     'verbosity': 2,
 }
 
-ENVS = [
-    f'APP_PROJNAME={CFG.APP_PROJNAME}',
-    f'APP_DEPENV={CFG.APP_DEPENV}',
-    f'APP_VERSION={CFG.APP_VERSION}',
-    f'APP_BRANCH={CFG.APP_BRANCH}',
-    f'APP_DEPENV={CFG.APP_DEPENV}',
-    f'APP_REVISION={CFG.APP_REVISION}',
-    f'APP_REMOTE_ORIGIN_URL={CFG.APP_REMOTE_ORIGIN_URL}',
-    f'APP_INSTALLPATH={CFG.APP_INSTALLPATH}',
-]
+SPACE = ' '
+NEWLINE = '\n'
 
 DOCKER_COMPOSE_YML = yaml.safe_load(open(f'{CFG.APP_PROJPATH}/docker-compose.yml'))
 SVCS = DOCKER_COMPOSE_YML['services'].keys()
+
+def envs(sep):
+    return sep.join([
+        f'APP_PROJNAME={CFG.APP_PROJNAME}',
+        f'APP_DEPENV={CFG.APP_DEPENV}',
+        f'APP_VERSION={CFG.APP_VERSION}',
+        f'APP_BRANCH={CFG.APP_BRANCH}',
+        f'APP_DEPENV={CFG.APP_DEPENV}',
+        f'APP_REVISION={CFG.APP_REVISION}',
+        f'APP_REMOTE_ORIGIN_URL={CFG.APP_REMOTE_ORIGIN_URL}',
+        f'APP_INSTALLPATH={CFG.APP_INSTALLPATH}',
+    ])
 
 def docstr_format(*args, **kwargs):
     def wrapper(func):
@@ -301,10 +305,9 @@ def task_genenv():
     '''
     generate env file
     '''
-    generated_env = '\n'.join(ENVS)
     return {
         'actions': [
-            f'echo "{generated_env}" > {CFG.APP_PROJPATH}/generated.env'
+            f'echo "{envs(NEWLINE)}" > {CFG.APP_PROJPATH}/generated.env'
         ],
     }
 
@@ -339,7 +342,6 @@ def task_build():
     '''
     build flask|quart app via docker-compose
     '''
-    envs = ' '.join(ENVS)
     return {
         'task_dep': [
             'noroot',
@@ -348,8 +350,8 @@ def task_build():
             'dockercompose',
         ],
         'actions': [
-            f'echo "cd {CFG.APP_PROJPATH} && env {envs} docker-compose build"',
-            f'cd {CFG.APP_PROJPATH} && env {envs} docker-compose build',
+            f'echo "cd {CFG.APP_PROJPATH} && env {envs(SPACE)} docker-compose build"',
+            f'cd {CFG.APP_PROJPATH} && env {envs(SPACE)} docker-compose build',
         ],
     }
 
@@ -374,7 +376,6 @@ def task_deploy():
     '''
     deloy flask|quart app via docker-compose
     '''
-    envs = ' '.join(ENVS)
     return {
         'task_dep': [
             'noroot',
@@ -384,8 +385,8 @@ def task_deploy():
             'dockercompose',
         ],
         'actions': [
-            f'echo "cd {CFG.APP_PROJPATH} && env {envs} docker-compose up --remove-orphans -d"',
-            f'cd {CFG.APP_PROJPATH} && env {envs} docker-compose up --remove-orphans -d',
+            f'echo "cd {CFG.APP_PROJPATH} && env {envs(SPACE)} docker-compose up --remove-orphans -d"',
+            f'cd {CFG.APP_PROJPATH} && env {envs(SPACE)} docker-compose up --remove-orphans -d',
         ],
     }
 
