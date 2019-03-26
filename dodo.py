@@ -37,8 +37,25 @@ DOIT_CONFIG = {
     'verbosity': 2,
 }
 
+ENVS = [
+    f'APP_PROJNAME={CFG.APP_PROJNAME}',
+    f'APP_DEPENV={CFG.APP_DEPENV}',
+    f'APP_VERSION={CFG.APP_VERSION}',
+    f'APP_BRANCH={CFG.APP_BRANCH}',
+    f'APP_DEPENV={CFG.APP_DEPENV}',
+    f'APP_REVISION={CFG.APP_REVISION}',
+    f'APP_REMOTE_ORIGIN_URL={CFG.APP_REMOTE_ORIGIN_URL}',
+    f'APP_INSTALLPATH={CFG.APP_INSTALLPATH}',
+]
+
 DOCKER_COMPOSE_YML = yaml.safe_load(open(f'{CFG.APP_PROJPATH}/docker-compose.yml'))
 SVCS = DOCKER_COMPOSE_YML['services'].keys()
+
+def docstr_format(*args, **kwargs):
+    def wrapper(func):
+        func.__doc__ = func.__doc__.format(*args, **kwargs)
+        return func
+    return wrapper
 
 class UnknownPkgmgrError(Exception):
     def __init__(self):
@@ -63,17 +80,6 @@ def get_pkgmgr():
 def pyfiles(path, exclude=None):
     pyfiles = set(Path(path).rglob('*.py')) - set(Path(exclude).rglob('*.py') if exclude else [])
     return [pyfile.as_posix() for pyfile in pyfiles]
-
-def env():
-    return ' '.join([
-        'env',
-        f'APP_PROJNAME={CFG.APP_PROJNAME}',
-        f'APP_PROJPATH={CFG.APP_PROJPATH}',
-        f'APP_VERSION={CFG.APP_VERSION}',
-        f'APP_BRANCH={CFG.APP_BRANCH}',
-        f'APP_REVISION={CFG.APP_REVISION}',
-        f'APP_REMOTE_ORIGIN_URL={CFG.APP_REMOTE_ORIGIN_URL}',
-    ])
 
 def task_count():
     '''
@@ -118,9 +124,10 @@ def task_checkreqs():
         }
     }[get_pkgmgr()]
 
+@docstr_format(version=MINIMUM_DOCKER_COMPOSE_VERSION)
 def task_dockercompose():
     '''
-    assert docker-compose version ({0}) or higher
+    assert docker-compose version ({version}) or higher
     '''
     def check_docker_compose():
         import re
@@ -290,6 +297,17 @@ def task_tls():
         'uptodate': [uptodate],
     }
 
+def task_genenv():
+    '''
+    generate env file
+    '''
+    generated_env = '\n'.join(ENVS)
+    return {
+        'actions': [
+            f'echo "{generated_env}" > {CFG.APP_PROJPATH}/generated.env'
+        ],
+    }
+
 def task_tar():
     '''
     tar up source files, dereferncing symlinks
@@ -321,15 +339,17 @@ def task_build():
     '''
     build flask|quart app via docker-compose
     '''
+    envs = ' '.join(ENVS)
     return {
         'task_dep': [
             'noroot',
             'tar',
+            'genenv',
             'dockercompose',
         ],
         'actions': [
-            f'echo "cd {CFG.APP_PROJPATH} && {env()} docker-compose build"',
-            f'cd {CFG.APP_PROJPATH} && {env()} docker-compose build',
+            f'echo "cd {CFG.APP_PROJPATH} && env {envs} docker-compose build"',
+            f'cd {CFG.APP_PROJPATH} && env {envs} docker-compose build',
         ],
     }
 
@@ -373,6 +393,7 @@ def task_deploy():
     '''
     deloy flask|quart app via docker-compose
     '''
+    envs = ' '.join(ENVS)
     return {
         'task_dep': [
             'noroot',
@@ -382,8 +403,8 @@ def task_deploy():
             'dockercompose',
         ],
         'actions': [
-            f'echo "cd {CFG.APP_PROJPATH} && {env()} docker-compose up --remove-orphans -d"',
-            f'cd {CFG.APP_PROJPATH} && {env()} docker-compose up --remove-orphans -d',
+            f'echo "cd {CFG.APP_PROJPATH} && env {envs} docker-compose up --remove-orphans -d"',
+            f'cd {CFG.APP_PROJPATH} && env {envs} docker-compose up --remove-orphans -d',
         ],
     }
 
@@ -405,9 +426,10 @@ def task_stop():
         ],
     }
 
+@docstr_format(projname=CFG.APP_PROJNAME)
 def task_rmtagged():
     '''
-    remove all tagged images matching: itcw/{CFG.APP_PROJNAME}_
+    remove all tagged images matching: itcw/{projname}_
     '''
     awk = """awk '{print $1 ":" $2}'"""
     query = f'$(docker images | grep itcw/{CFG.APP_PROJNAME}_ | {awk})'
