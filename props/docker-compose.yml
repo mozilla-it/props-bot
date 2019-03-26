@@ -1,32 +1,23 @@
 version: '3.3'
 services:
   db:
+    env_file:
+      - secrets.env
+      - generated.env
     build:
       context: ./db
-      labels:
-        APP_PROJNAME: ${APP_PROJNAME}
-        APP_VERSION: ${APP_VERSION}
-        APP_BRANCH: ${APP_BRANCH}
-        APP_REVISION: ${APP_REVISION}
     image: itcw/props_db:${APP_VERSION:-latest}
     restart: always
     ports:
     - 5432:5432
-    environment:
-      APP_PROJNAME: ${APP_PROJNAME}
-      APP_VERSION: ${APP_VERSION}
-      APP_BRANCH: ${APP_BRANCH}
-      APP_REVISION: ${APP_REVISION}
     volumes:
     - database_data:/var/lib/postgresql/data
   bot:
+    env_file:
+      - secrets.env
+      - generated.env
     build:
       context: ./bot
-      labels:
-        APP_PROJNAME: ${APP_PROJNAME}
-        APP_VERSION: ${APP_VERSION}
-        APP_BRANCH: ${APP_BRANCH}
-        APP_REVISION: ${APP_REVISION}
     image: itcw/props_bot:${APP_VERSION:-latest}
     expose:
     - 8080
@@ -34,13 +25,6 @@ services:
     - 8080:8080
     links:
     - db
-    environment:
-      APP_PROJNAME: ${APP_PROJNAME}
-      APP_VERSION: ${APP_VERSION}
-      APP_BRANCH: ${APP_BRANCH}
-      APP_REVISION: ${APP_REVISION}
-    volumes:
-    - ${APP_PROJPATH}/bot/.env:/usr/src/app/.env
 volumes:
   database_data:
     driver: local
