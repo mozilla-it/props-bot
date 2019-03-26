@@ -353,24 +353,6 @@ def task_build():
         ],
     }
 
-def task_tag():
-    '''
-    tag the docker images with the tagname
-    '''
-    for svc in SVCS:
-        imagename = f'itcw/{CFG.APP_PROJNAME}_{svc}'
-        yield {
-            'name': svc,
-            'task_dep': [
-                'noroot',
-                'build',
-            ],
-            'actions': [
-                f'echo created tagged image: {imagename}:{CFG.APP_TAGNAME}',
-                f'docker tag {imagename}:{CFG.APP_VERSION} {imagename}:{CFG.APP_TAGNAME}',
-            ],
-        }
-
 def task_publish():
     '''
     publish docker image(s) to docker hub
@@ -382,10 +364,9 @@ def task_publish():
             'task_dep': [
                 'noroot',
                 'build',
-                'tag',
             ],
             'actions': [
-                f'docker push {imagename}:{CFG.APP_TAGNAME}',
+                f'docker push {imagename}:{CFG.APP_VERSION}',
             ],
         }
 

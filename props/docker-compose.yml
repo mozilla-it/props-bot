@@ -6,7 +6,7 @@ services:
       - generated.env
     build:
       context: ./db
-    image: itcw/props_db:${APP_VERSION:-latest}
+    image: itcw/props_db:${APP_VERSION}
     restart: always
     ports:
     - 5432:5432
@@ -18,7 +18,7 @@ services:
       - generated.env
     build:
       context: ./bot
-    image: itcw/props_bot:${APP_VERSION:-latest}
+    image: itcw/props_bot:${APP_VERSION}
     expose:
     - 8080
     ports:

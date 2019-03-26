@@ -158,19 +158,6 @@ class AutoConfigPlus(AutoConfig): #pylint: disable=too-many-public-methods
         return self('APP_INSTALLPATH', '/usr/src/app')
 
     @property
-    def APP_TAGNAME(self):
-        '''
-        tagname
-        '''
-        tag = self.APP_VERSION.split('-')[0]
-        depenv = {
-            'prod': '',
-            'stage': '-stage',
-            'dev': '-dev'
-        }[self.APP_DEPENV]
-        return f'{tag}{depenv}'
-
-    @property
     def APP_VERSION(self):
         '''
         version
