@@ -484,12 +484,16 @@ def task_rmcache():
     recursively delete python cache files
     '''
     rmrf = 'rm -rf "{}" \;'
-    return dict(
-        actions=[
-            f'sudo find {CFG.APP_REPOROOT} -depth -name __pycache__ -type d -exec {rmrf}',
-            f'sudo find {CFG.APP_REPOROOT} -depth -name *.pyc -type f -exec {rmrf}',
-        ]
-    )
+    names_types = {
+        '__pycache__': 'd',
+        '.pytest_cache': 'd',
+        '*.pyc': 'f',
+    }
+    return {
+        'actions': [
+            f'sudo find {CFG.APP_REPOROOT} -depth -name {name} -type {type} -exec {rmrf}' for name, type in names_types.items()
+        ],
+    }
 
 def task_tidy():
     '''
