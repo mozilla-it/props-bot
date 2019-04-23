@@ -39,10 +39,6 @@ async def jsonify(status=200, indent=4, sort_keys=True, **kwargs):
     response.status_code = status
     return response
 
-### incoming webhooks
-### https://hooks.slack.com/services/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
-
-
 def is_request_valid(token, team_id):
     '''
     is_request_valid
